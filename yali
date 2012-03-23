@@ -1,0 +1,17 @@
+#!/bin/bash
+
+input=$1
+output=/tmp/yali.pl
+
+echo "consult(yali)." > $output
+
+cat $input | \
+sed 's/ \+/,/g' | \
+sed 's/(/\[/g'  | \
+sed 's/)/\]/g'  | \
+sed 's/^\(.*\);.*$/\1/' | \
+sed '/^$/d' | \
+sed 's/\(.*\)/eval(\[\],\[\],\1,O,FO).\n/' >> $output
+
+cat $output | swipl 
+
