@@ -39,7 +39,7 @@ eval(N,F,Value,O,NewF) :- expand(Value,ExpandedValue,CustomF),
                           exe(N,NewF,ExpandedValue,O).
 
 % function declarations may not be nested
-expand([defun, Id, ParamVars, Body],Id,[[Id,ParamVars,ExpandedBody]]) :- expand(Body,ExpandedBody,[]). 
+expand([defun, Id, ParamVars, Body],[quote,Id],[[Id,ParamVars,ExpandedBody]]) :- expand(Body,ExpandedBody,[]). 
 
 % conditions are expanded to an appropriate function
 expand([if, Cond, Then, Else],[cond,[ExpandedCond,ExpandedThen],[t,ExpandedElse]],FO) :- expand(Cond,ExpandedCond,CondF),
@@ -57,7 +57,7 @@ expand(O,O,[]).
 
 % cond
 exeCases(_,_,[],[]).
-exeCases(N,F,[[Cond,Expr]|_],O) :- exe(N,F,Cond,Bool), Bool, exe(N,F,Expr,O).
+exeCases(N,F,[[Cond,Expr]|_],O) :- exe(N,F,Cond,Bool), Bool=t, exe(N,F,Expr,O).
 exeCases(N,F,[_|T],O) :- exeCases(N,F,T,O).
 
 exe(N,F,[cond|Cases],O) :- exeCases(N,F,Cases,O).
@@ -69,6 +69,7 @@ exe(_,_,[quote|[Value]],Value).
 exe(N,F,[Id|Params],O) :- exeParams(N,F,Params,Evaluated), fun(F,Id,Evaluated,O).
 
 % resolves a variable, if it is not found, variable name is returned
+exe(_,_,[],[]).
 exe([[Id|Value]|_],_,Id,Value).
 exe([_|T],F,Id,Value) :- exe(T,F,Id,Value).
 exe([],_,Num,Num) :- number(Num).
@@ -82,14 +83,15 @@ bindParamVars([Param|T],[ParamVar|T2],[.(ParamVar,Param)|NO]):-bindParamVars(T,T
 fun(_,car,Params,O) :- Params = [[O|_]].
 fun(_,cdr,Params,O) :- Params = [[_|O]].
 fun(_,list,Params,Params).
+fun(_,null,[[]],t).
+fun(_,null,[nil],t).
+fun(_,null,_,nil).
 fun(_,(<),[A,B],t) :- number(A), number(B), A<B.
 fun(_,(<),[A,B],t) :- number(A), number(B).
 fun(_,(>),[A,B],t) :- number(A), number(B), A>B.
 fun(_,(>),[A,B],nil) :- number(A), number(B).
 fun(_,(=),[A,B],t) :- number(A), number(B), A=B.
 fun(_,(=),[A,B],nil) :- number(A), number(B).
-fun(_,null,[],t).
-fun(_,null,_,nil).
 fun(_,(+),[A,B],O) :- number(A), number(B), O is A+B.
 fun(_,(-),[A,B],O) :- number(A), number(B), O is A-B.
 fun(_,(*),[A,B],O) :- number(A), number(B), O is A*B.
