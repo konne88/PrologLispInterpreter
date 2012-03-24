@@ -1,9 +1,9 @@
 #!/bin/bash
 
 input=$1
-output=/tmp/yali.pl
+output=/tmp/pli.pl
 
-echo -e "consult(yali).\nnb_setval(fo,[])." > $output
+echo -e "consult(pli).\nnb_setval(fo,[])." > $output
 
 cat $input | sed 's/;.*$//' | \
 awk 'BEGIN{FS=""}{

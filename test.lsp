@@ -1,4 +1,6 @@
 ; Test expressions for pli
+; To run them, execute 
+; ./pli test.lsp
 5
 (list 1 2)
 (cdr (list 1 2 3))
