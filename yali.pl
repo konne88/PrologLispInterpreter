@@ -3,135 +3,174 @@
 % 
 % quote
 % defun
-% 
+% let
+% cond
+% if
+%
 % car
 % cdr
 % list
-%
-% TODO
-% caaaaar, caaddddr ...
-% cond
 % cons
-% append
-% let
-% if
-% eval
-
-% remove NO from macros parsing
-
-concat([],B,B).
-concat([A|T],B,[A|R]) :- concat(T,B,R).
-
-% N is a list of variables represented as the tuple (id,value)
-% F is a list of functions, represented as the tuple (id,parameters,body)
-% O is the output structure of command
+% null
+% 
+% >,<
+% +,-,*
+% floor
+%
+% There are lots of things you cannot do such as quoting lists with ' or
+% Define custom macros, etc. Further the way numbers are used, especially
+% Concerning rounding etc, might be wrong
+%
+% Each predicate defined in this code has a short header describing what
+% The predicate does. This description is followed by a newline and a
+% Detailed description of all the predicate's parameters. The following
+% common parameters are not described again for each function:
+% 
+% N is a list of variables represented as the tuple .(id,value). This list
+%   generally represents the locally declared variables
+% F is a list of functions, represented as the tuple [id,parameters,body]
+%   This list generally represents the locally declared functions.
+% O is the resulting structure of a command execution
 % Id is an identifier
 % Param is a parameter
 % T stands for the tail of a list
 % H stand for head
+%
+% Common names can be concaternated to form more complex things such as
+% FO, which stands for List of Functions to that resulted from command execution
 
 % True is true
 t.
 
-% first expand all macros and then execute the created structure
-eval(N,F,Value,O,NewF) :- expand(Value,ExpandedValue,CustomF), 
-                          concat(CustomF,F,NewF), 
-                          exe(N,NewF,ExpandedValue,O).
+% This is the only entry function for users of this module
+% First expand all macros and then execute the created structure
+%
+% Value is the structure to be executed,
+% O,N,F,FO
+eval(Value,O,N,F,FO) :- expand(Value,ExpandedValue,CustomF), 
+                          append(CustomF,F,FO), 
+                          exe(N,FO,ExpandedValue,O).
 
-% function declarations may not be nested
-expand([defun, Id, ParamVars, Body],[quote,Id],[[Id,ParamVars,ExpandedBody]]) :- expand(Body,ExpandedBody,[]). 
+% Expand macros, this is mainly used for function daclarations and if but could be 
+% extended to support used provided macros
+%
+% Value to be expanded,
+% O,FO
+expand([defun, Id, ParamVars, Body],[quote,Id],[[Id,ParamVars,ExpandedBody]]) :- expand(Body,ExpandedBody,[]), !. 
 
-% conditions are expanded to an appropriate function
 expand([if, Cond, Then, Else],[cond,[ExpandedCond,ExpandedThen],[t,ExpandedElse]],FO) :- expand(Cond,ExpandedCond,CondF),
 										         expand(Then,ExpandedThen,ThenF),
                      								         expand(Else,ExpandedElse,ElseF),
-                                                                                         concat(CondF,ThenF,CondThenF),
-                                                                                         concat(CondThenF,ElseF,FO).
+                                                                                         append(CondF,ThenF,CondThenF),
+                                                                                         append(CondThenF,ElseF,FO), !.
 
-% resursively evaluate all nodes of the structure
+% Resursively expand all nodes of the structure
 expand([H|T],[HO|TO],FO) :- expand(H,HO,HFO), expand(T,TO,TFO), 
-                            concat(HFO,TFO,FO).
+                            append(HFO,TFO,FO), !.
 
-% expanding simple elements does not do anything
+% Expanding simple elements does not do anything
 expand(O,O,[]).
 
-% cond
+% Used internally by the cond statement. Evaluates and Executes appropriate Cases.
+%
+% N,F,
+% Values is a list of condition expression tuples such that each element is [Condition,Expression]
+% O
 exeCases(_,_,[],[]).
-exeCases(N,F,[[Cond,Expr]|_],O) :- exe(N,F,Cond,Bool), Bool=t, exe(N,F,Expr,O).
+exeCases(N,F,[[Cond,Expr]|T],O) :- exe(N,F,Cond,Bool), Bool=t, exe(N,F,Expr,O), !.
 exeCases(N,F,[_|T],O) :- exeCases(N,F,T,O).
 
+% Used internally by the let statement. Executes and Binds all variables declared in the led statement.
+% THis means that it adds new Variables to N.
+%
+% N,F,
+% Values is a list of Id Value tuples such that each element is [Id,Value].
+% NO
 bindValues(N,_,[],N).
-bindValues(N,F,[[Id,Value]|T],NO):-exe(N,F,Value,ExecutedValue), bindValues([.(Id,ExecutedValue)|N],F,T,NO).
+bindValues(N,F,[[Id,Value]|T],[.(Id,ExecutedValue)|NO]):-exe(N,F,Value,ExecutedValue), bindValues(N,F,T,NO).
 
-exe(N,F,[cond|Cases],O) :- exeCases(N,F,Cases,O).
-
-% quote stops evaluation
-exe(_,_,[quote,Value],Value).
-
-% let binds some values
-exe(N,F,[let, Values, Body],O) :- bindValues(N,F,Values,NewN), exe(NewN,F,Body,O).
-
-% evaluate a function
-exe(N,F,[Id|Params],O) :- exeParams(N,F,Params,Evaluated), fun(F,Id,Evaluated,O).
-
-% resolves a variable, if it is not found, variable name is returned
-exe(_,_,[],[]).
-exe([[Id|Value]|_],_,Id,Value).
-exe([_|T],F,Id,Value) :- exe(T,F,Id,Value).
-exe([],_,Num,Num) :- number(Num).
-exe([],_,t,t).
-exe([],_,nil,[]).
-
-bindParamVars([],[],[]).
-bindParamVars([Param|T],[ParamVar|T2],[.(ParamVar,Param)|NO]):-bindParamVars(T,T2,NO).
-
-% execute a common function
-fun(_,car,Params,O) :- Params = [[O|_]].
-fun(_,cdr,Params,O) :- Params = [[_|O]].
-fun(_,list,Params,Params).
-fun(_,cons,[A,B],.(A,B)).
-fun(_,null,[[]],t).
-fun(_,null,[nil],t).
-fun(_,null,_,nil).
-fun(_,floor,[A],O) :- number(A), O is floor(A).
-fun(_,(<),[A,B],t) :- number(A), number(B), A<B.
-fun(_,(<),[A,B],t) :- number(A), number(B).
-fun(_,(>),[A,B],t) :- number(A), number(B), A>B.
-fun(_,(>),[A,B],nil) :- number(A), number(B).
-fun(_,(=),[A,B],t) :- number(A), number(B), A=B.
-fun(_,(=),[A,B],nil) :- number(A), number(B).
-fun(_,(+),[A,B],O) :- number(A), number(B), O is A+B.
-fun(_,(-),[A,B],O) :- number(A), number(B), O is A-B.
-fun(_,(*),[A,B],O) :- number(A), number(B), O is A*B.
-fun(_,(/),[A,B],O) :- number(A), number(B), O is A/B.
-
-% go for the user defined functions
-fun(F,Id,Params,O) :- userFun(F,F,Id,Params,O).
-
-userFun(F,[[Id,ParamVars,Body]|_],Id,Params,O) :- bindParamVars(Params,ParamVars,N), 
-            				          exe(N,F,Body,O).
-userFun(F,[_|T],Id,Params,O) :- userFun(F,T,Id,Params,O).
-
-% evaluates all elements of a list
+% Used internally by exe to evaluate a function's parameters before calling the function.
+%
+% N,F,
+% A list of Parameters to be evaluated,
+% O is a list of evaluated parameters
 exeParams(_,_,[],[]).
 exeParams(N,F,[Element|T],[Evaluated|T2]) :- exe(N,F,Element,Evaluated), exeParams(N,F,T,T2).
 
-% eval([],[],5,O,FO).
-% eval([.(x,1337)],[],x,O,FO).
-% eval([],[],[list,1,2],O,FO).
-% eval([],[],[cdr,[list,1,2,3]],O,FO).
-% eval([.(x,1337)],[],[car,[list,x,2,3]],O,FO).
-% eval([],[],[defun, test, [x,y], [list,1,2,x,y]],O,FO).
-% eval([],[],[defun, test, [a], a],O,FO), eval([],FO,[test,1337],O2,FO2). 
-% eval([],[],[defun, test, [x,y], [list,1,2,x,y]],O,FO), eval([],FO,[test,3,4],O2,FO2).
-% eval([],[],[quote, [a,[+,3,4],var,66,du,[1,6,8,[[],[]],va]]],O,FO). 
-% eval([],[],[+,[t,5]],O,FO).
-% eval([],[],[-,[t,5]],O,FO).
-% eval([],[],[*,[t,5]],O,FO).
-% eval([],[],[/,[t,5]],O,FO).
-% eval([],[],[/,[t,5]],O,FO).
-% eval([],[],[<,[t,5]],O,FO).
-% eval([],[],[>,[t,5]],O,FO).
-% eval([],[],[null,[t,5]],O,FO).
-% eval([],[],[null,[t,5]],O,FO).
+% Executes an already expanded structure in lisp fashion
+% 
+% N,F,
+% Value is the structure to be executed,
+% O
+exe(N,F,[cond|Cases],O) :- exeCases(N,F,Cases,O), !.
+
+% Quote stops evaluation
+exe(_,_,[quote,Value],Value) :- !.
+
+% Let binds some values
+exe(N,F,[let, Values, Body],O) :- bindValues(N,F,Values,NewN), exe(NewN,F,Body,O), !.
+
+% Evaluate a function
+exe(N,F,[Id|Params],O) :- exeParams(N,F,Params,Evaluated), fun(F,Id,Evaluated,O), !.
+
+% Common atoms that need no execution
+exe(_,_,[],[]):- !.
+exe(_,_,Num,Num) :- number(Num), !.
+exe(_,_,t,t) :- !.
+exe(_,_,nil,[]):- !.
+
+% Resolves a variable
+exe([[Id|Value]|_],_,Id,Value):- !.
+exe([_|T],F,Id,Value) :- exe(T,F,Id,Value).
+
+% Used internally by userFun. Binds the parameters passed to a 
+% user defined function to it's internal namespace N.
+% 
+% ParamIds  A List of the function's parameter Ids,
+% Param     The Values that should be bound to these Ids,
+% NO
+bindParamVars([],[],[]).
+bindParamVars([Param|T],[ParamVar|T2],[.(ParamVar,Param)|NO]):-bindParamVars(T,T2,NO).
+
+% Used internally by fun for used defined functions.
+% Looks up the name of the function that is to be executed and 
+% Runs the appropriate code.
+%
+% F,
+% A sublist of F with all the function names that were not yet checked,
+% Function Name is the name of the function to be called,
+% Params is a list of parameteres passed to the function,
+% O
+userFun(F,[[Id,ParamVars,Body]|_],Id,Params,O) :- bindParamVars(Params,ParamVars,N), 
+            				          exe(N,F,Body,O), !.
+userFun(F,[_|T],Id,Params,O) :- userFun(F,T,Id,Params,O).
+
+% Executes a function
+%
+% F,
+% Function Name is the name of the function to be called,
+% Params is a list of parameteres passed to the function,
+% O
+fun(_,print,[Value],Value) :- write(Value), nl, !.
+fun(_,car,Params,O) :- Params = [[O|_]], !.
+fun(_,cdr,Params,O) :- Params = [[_|O]], !.
+fun(_,list,Params,Params):- !.
+fun(_,cons,[A,B],.(A,B)):- !.
+fun(_,null,[[]],t) :- !.
+fun(_,null,[nil],t) :- !.
+fun(_,null,_,nil) :- !.
+fun(_,floor,[A,B],O) :- number(A), C is A/B, O is floor(C), !.
+fun(_,(<),[A,B],t) :- number(A), number(B), A<B, !.
+fun(_,(<),[A,B],nil) :- number(A), number(B), !.
+fun(_,(>),[A,B],t) :- number(A), number(B), A>B, !.
+fun(_,(>),[A,B],nil) :- number(A), number(B), !.
+fun(_,(=),[A,B],t) :- number(A), number(B), A=B, !.
+fun(_,(=),[A,B],nil) :- number(A), number(B), !.
+fun(_,(+),[A,B],O) :- number(A), number(B), O is A+B, !.
+fun(_,(-),[A,B],O) :- number(A), number(B), O is A-B, !.
+fun(_,(*),[A,B],O) :- number(A), number(B), O is A*B, !.
+fun(_,(/),[A,B],O) :- number(A), number(B), O is A/B, !.
+
+% execute the user defined functions
+fun(F,Id,Params,O) :- userFun(F,F,Id,Params,O).
 

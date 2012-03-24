@@ -29,7 +29,7 @@ sed 's/ \+/,/g' | \
 sed 's/(/\[/g'  | \
 sed 's/)/\]/g'  | \
 sed '/^$/d' | \
-sed 's/\(.*\)/b_getval(fo, Fin), Execute = eval(\[\],Fin,\1,Eval,Funs), Execute, nb_setval(fo, Funs).\n/' >> $output
+sed 's/\(.*\)/Execute = eval(\1,Eval,\[\],Fin,Funs), b_getval(fo, Fin), Execute, nb_setval(fo, Funs).\n/' >> $output
 
 cat $output | swipl 
 
