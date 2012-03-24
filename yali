@@ -3,7 +3,7 @@
 input=$1
 output=/tmp/yali.pl
 
-echo "consult(yali)." > $output
+echo -e "consult(yali).\nnb_setval(fo,[])." > $output
 
 cat $input | sed 's/;.*$//' | \
 awk 'BEGIN{FS=""}{
@@ -29,7 +29,7 @@ sed 's/ \+/,/g' | \
 sed 's/(/\[/g'  | \
 sed 's/)/\]/g'  | \
 sed '/^$/d' | \
-sed 's/\(.*\)/Execute = eval(\[\],\[\],\1,Eval,Funs), Execute.\n/' >> $output
+sed 's/\(.*\)/b_getval(fo, Fin), Execute = eval(\[\],Fin,\1,Eval,Funs), Execute, nb_setval(fo, Funs).\n/' >> $output
 
 cat $output | swipl 
 

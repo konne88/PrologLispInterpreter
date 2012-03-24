@@ -60,10 +60,16 @@ exeCases(_,_,[],[]).
 exeCases(N,F,[[Cond,Expr]|_],O) :- exe(N,F,Cond,Bool), Bool=t, exe(N,F,Expr,O).
 exeCases(N,F,[_|T],O) :- exeCases(N,F,T,O).
 
+bindValues(N,_,[],N).
+bindValues(N,F,[[Id,Value]|T],NO):-exe(N,F,Value,ExecutedValue), bindValues([.(Id,ExecutedValue)|N],F,T,NO).
+
 exe(N,F,[cond|Cases],O) :- exeCases(N,F,Cases,O).
 
 % quote stops evaluation
-exe(_,_,[quote|[Value]],Value).
+exe(_,_,[quote,Value],Value).
+
+% let binds some values
+exe(N,F,[let, Values, Body],O) :- bindValues(N,F,Values,NewN), exe(NewN,F,Body,O).
 
 % evaluate a function
 exe(N,F,[Id|Params],O) :- exeParams(N,F,Params,Evaluated), fun(F,Id,Evaluated,O).
@@ -83,9 +89,11 @@ bindParamVars([Param|T],[ParamVar|T2],[.(ParamVar,Param)|NO]):-bindParamVars(T,T
 fun(_,car,Params,O) :- Params = [[O|_]].
 fun(_,cdr,Params,O) :- Params = [[_|O]].
 fun(_,list,Params,Params).
+fun(_,cons,[A,B],.(A,B)).
 fun(_,null,[[]],t).
 fun(_,null,[nil],t).
 fun(_,null,_,nil).
+fun(_,floor,[A],O) :- number(A), O is floor(A).
 fun(_,(<),[A,B],t) :- number(A), number(B), A<B.
 fun(_,(<),[A,B],t) :- number(A), number(B).
 fun(_,(>),[A,B],t) :- number(A), number(B), A>B.
