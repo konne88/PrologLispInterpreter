@@ -1,0 +1,24 @@
+This project was written in the hours from 6pm to 4am, and had some
+bugfixes from 4pm to 7pm on the following day. So don't expect something
+extraordinarily cracy. If you want to know which features are supported,
+checkout the testcases and see what is used there. The features supported
+are enough to be turing complete, functions, branches, local variables,
+simple arithmatic and basic list manipulation is supported.
+
+The heard of the project is the pli.pl file.
+It provides the eval function which is capable of executing
+lisp written in Prolog style. Lisp written in prolog style looks
+like the following:
+
+(car (cdr (list 1 2 x)))
+[car,[cdr,[list,1,2,x]]].
+
+The pli script simply parses a lisp file and converts the 
+lisp to Prolog style lisp. Since it is just a simple script,
+badly placed spaces may lead to invalidly palced commans in the 
+result, so take care. This script also does some magic output
+generation but and makes sure that functions are available for
+multiple expressions.
+
+If you want to see some tests being executed run
+./pli tests.lsp
