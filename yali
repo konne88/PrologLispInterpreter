@@ -5,11 +5,29 @@ output=/tmp/yali.pl
 
 echo "consult(yali)." > $output
 
-cat $input | \
+cat $input | sed 's/;.*$//' | \
+awk 'BEGIN{FS=""}{
+    for(i=1;i<=NF;i++) {
+        if($(i) == "(") {
+            ++b
+        } 
+        printf "%s",$(i)
+	if($(i) == ")") {
+            --b
+            if(b == 0)        
+                printf "\n" 
+	}
+    }
+    if(b == 0)        
+        printf "\n" 
+    else
+        printf " "
+}' | \
+sed 's/^ *//' | \
+sed 's/ *$//' | \
 sed 's/ \+/,/g' | \
 sed 's/(/\[/g'  | \
 sed 's/)/\]/g'  | \
-sed 's/^\(.*\);.*$/\1/' | \
 sed '/^$/d' | \
 sed 's/\(.*\)/Execute = eval(\[\],\[\],\1,Eval,Funs), Execute.\n/' >> $output
 

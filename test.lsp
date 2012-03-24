@@ -21,9 +21,12 @@ nil
 (null ())
 (null 1)
 (cond (t 5))
-(cond ((> 2 3) 1) (t 2))
-(cond ((> 3 5) 0) ((< (car (quote 2 5)) 3) 1) (t 2))
+(cond ((> 2 3) 1) 
+      (t 2))
+(cond ((> 3 5) 0) 
+      ((< (car (quote 2 5)) 3) 1) 
+      (t 2))
 (if (null nil) (quote right) (quote wrong))
 (if (null (list 1)) (quote wrong) (quote right))
 
-
+(defun sort (l) l)
